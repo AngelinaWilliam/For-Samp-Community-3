@@ -1,0 +1,329 @@
+#define MAX_THOUSE 50
+
+new TrapHouse[MAX_PLAYERS];
+
+enum thEnum
+{
+	tID,
+	tExists,
+	tName[32],
+	tTime,
+	tOpenning,
+	Float:tPointX,
+	Float:tPointY,
+	Float:tPointZ,
+	Float:tPointX1,
+	Float:tPointY1,
+	Float:tPointZ1,
+	Float:tPointX2,
+	Float:tPointY2,
+	Float:tPointZ2,
+	Text3D:tText,
+	Text3D:tText1,
+	Text3D:tText2,
+	tObject1,
+	tObject2,
+	tInside,
+	tObject
+};
+new THouseInfo[MAX_THOUSE][thEnum];
+
+ReloadTHouse(thouseid)
+{
+    if(THouseInfo[thouseid][tExists])
+    {
+        new string[128], string1[128], string2[128];
+        DestroyDynamic3DTextLabel(THouseInfo[thouseid][tText]);
+        DestroyDynamicObject(THouseInfo[thouseid][tObject]);
+		DestroyDynamic3DTextLabel(THouseInfo[thouseid][tText1]);
+        DestroyDynamicObject(THouseInfo[thouseid][tObject1]);
+		DestroyDynamic3DTextLabel(THouseInfo[thouseid][tText2]);
+        DestroyDynamicObject(THouseInfo[thouseid][tObject2]);
+
+        format(string, sizeof(string), ""SVRCLR"Trap House\n"WHITE"[%s]", THouseInfo[thouseid][tName]);
+		format(string1, sizeof(string1), ""SVRCLR"Exit Point\n"WHITE"[/exithouse]");
+		format(string2, sizeof(string2), ""SVRCLR"Safety Vault\n"WHITE"[/loottraphouse]");
+		THouseInfo[thouseid][tObject] = CreateDynamicPickup(1254, 1, THouseInfo[thouseid][tPointX], THouseInfo[thouseid][tPointY], THouseInfo[thouseid][tPointZ]);
+		THouseInfo[thouseid][tText] = CreateDynamic3DTextLabel(string, COLOR_YELLOW, THouseInfo[thouseid][tPointX], THouseInfo[thouseid][tPointY], THouseInfo[thouseid][tPointZ], 10.0, .worldid = 0, .interiorid = 0);
+		THouseInfo[thouseid][tObject1] = CreateDynamicPickup(1254, 1, THouseInfo[thouseid][tPointX1], THouseInfo[thouseid][tPointY1], THouseInfo[thouseid][tPointZ1]);
+		THouseInfo[thouseid][tText1] = CreateDynamic3DTextLabel(string1, COLOR_YELLOW, THouseInfo[thouseid][tPointX1], THouseInfo[thouseid][tPointY1], THouseInfo[thouseid][tPointZ1], 10.0, .worldid = 0, .interiorid = 1);
+		THouseInfo[thouseid][tObject2] = CreateDynamicPickup(1829, 1, THouseInfo[thouseid][tPointX2], THouseInfo[thouseid][tPointY2], THouseInfo[thouseid][tPointZ2]);
+		THouseInfo[thouseid][tText2] = CreateDynamic3DTextLabel(string2, COLOR_YELLOW, THouseInfo[thouseid][tPointX2], THouseInfo[thouseid][tPointY2], THouseInfo[thouseid][tPointZ2], 10.0, .worldid = 0, .interiorid = 1);
+	}
+}
+
+forward LoadTHouse();
+public LoadTHouse()
+{	
+	new rows = cache_get_row_count(connectionID);
+	for(new i = 0; i < rows && i < MAX_THOUSE; i ++)
+	{
+		cache_get_field_content(i, "name", THouseInfo[i][tName], connectionID, 32);
+		THouseInfo[i][tID] = cache_get_field_content_int(i, "id");
+		THouseInfo[i][tExists] = 1;
+		THouseInfo[i][tOpenning] = 0;
+		THouseInfo[i][tTime] = cache_get_field_content_int(i, "time");
+		THouseInfo[i][tText] = Text3D:INVALID_3DTEXT_ID;
+		THouseInfo[i][tObject] = -1;
+		THouseInfo[i][tText1] = Text3D:INVALID_3DTEXT_ID;
+		THouseInfo[i][tObject1] = -1;
+		THouseInfo[i][tPointX] = cache_get_field_content_float(i, "thouse_x");
+		THouseInfo[i][tPointY] = cache_get_field_content_float(i, "thouse_y");
+		THouseInfo[i][tPointZ] = cache_get_field_content_float(i, "thouse_z");
+		THouseInfo[i][tPointX1] = cache_get_field_content_float(i, "thouse_x1");
+		THouseInfo[i][tPointY1] = cache_get_field_content_float(i, "thouse_y1");
+		THouseInfo[i][tPointZ1] = cache_get_field_content_float(i, "thouse_z1");
+		THouseInfo[i][tPointX2] = cache_get_field_content_float(i, "thouse_x2");
+		THouseInfo[i][tPointY2] = cache_get_field_content_float(i, "thouse_y2");
+		THouseInfo[i][tPointZ2] = cache_get_field_content_float(i, "thouse_z2");
+		THouseInfo[i][tInside] = INVALID_PLAYER_ID;
+
+		ReloadTHouse(i);
+	}
+	printf("[Dynamic] %i trap houses loaded.", rows);
+}
+
+CMD:createtraphouse(playerid, params[])
+{
+    new Float:x, Float:y, Float:z;
+
+    if(PlayerInfo[[playerid][pAdmin] < 5 && !PlayerInfo[[playerid][pGangMod])
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "You are not authorized to use this command.");
+	}
+	GetPlayerPos(playerid, x, y, z);
+	for(new i = 0; i < MAX_THOUSE; i ++)
+	{
+	    if(!THouseInfo[i][tExists])
+	    {
+	        THouseInfo[i][tExists] = 1;
+			THouseInfo[i][tOpenning] = 0;
+	        THouseInfo[i][tTime] = 7;
+	        THouseInfo[i][tText] = Text3D:INVALID_3DTEXT_ID;
+	        THouseInfo[i][tObject] = -1;
+			THouseInfo[i][tText1] = Text3D:INVALID_3DTEXT_ID;
+	        THouseInfo[i][tObject1] = -1;
+			THouseInfo[i][tPointX] = x;
+			THouseInfo[i][tPointY] = y;
+			THouseInfo[i][tPointZ] = z;
+			THouseInfo[i][tPointX1] = x;
+			THouseInfo[i][tPointY1] = y;
+			THouseInfo[i][tPointZ1] = z;
+			THouseInfo[i][tPointX2] = x;
+			THouseInfo[i][tPointY2] = y;
+			THouseInfo[i][tPointZ2] = z;
+
+			mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "INSERT INTO traphouse (id, thouse_x, thouse_y, thouse_z, thouse_x1, thouse_y1, thouse_z1, time) VALUES(%i, '%f', '%f', '%f', '%f', '%f', '%f', %i)", i, THouseInfo[i][tPointX], THouseInfo[i][tPointY], THouseInfo[i][tPointZ], THouseInfo[i][tPointX1], THouseInfo[i][tPointY1], THouseInfo[i][tPointZ1], THouseInfo[i][tTime]);
+	        mysql_tquery(connectionID, queryBuffer);
+
+	        ReloadTHouse(i);
+
+	        SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has created trap house.", GetRPName(playerid));
+	        SendMessage(playerid, COLOR_WHITE, "You have created trap house.");
+	        return 1;
+		}
+	}
+
+	return 1;
+}
+
+CMD:edittraphouse(playerid, params[])
+{
+	new thouseid, option[14], param[32], Float:x, Float:y, Float:z;
+
+	if(PlayerInfo[[playerid][pAdmin] < 5 && !PlayerInfo[[playerid][pGangMod])
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "You are not authorized to use this command.");
+	}
+	if(sscanf(params, "is[14]S()[32]", thouseid, option, param))
+	{
+	    SendClientMessage(playerid, COLOR_SYNTAX, "Usage: /editthouse [traphouseid] [option]");
+		SendClientMessage(playerid, COLOR_WHITE, "Available options: Time, Pos, Int, Safe, Name");
+	    return 1;
+	}
+	if(!(0 <= thouseid < MAX_THOUSE) || !THouseInfo[thouseid][tExists])
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "Invalid trap house.");
+	}
+ 	if(!strcmp(option, "time", true))
+    {
+        new value;
+
+        if(sscanf(param, "i", value))
+        {
+            return SendClientMessage(playerid, COLOR_SYNTAX, "Usage: /editthouse [thouseid] [time] [seconds]");
+		}
+
+		THouseInfo[thouseid][tTime] = value;
+
+		SendMessageToAll(COLOR_GREEN, ""SVRCLR"[Trap House Update]: "WHITE"%s Trap House will be available in %i hour(s).", THouseInfo[thouseid][tName], value);
+		ReloadTHouse(thouseid);
+
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE traphouse SET time = %i WHERE id = %i", THouseInfo[thouseid][tTime], thouseid);
+		mysql_tquery(connectionID, queryBuffer);
+
+		SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has set the time of trap house %i to %i hours.", GetRPName(playerid), thouseid, value);
+		SendMessage(playerid, COLOR_WHITE, "You have set the time of trap house %i to %i hours.", thouseid, value);
+	}
+	if(!strcmp(option, "pos", true))
+    {
+		GetPlayerPos(playerid, x, y, z);
+		THouseInfo[thouseid][tPointX] = x;
+		THouseInfo[thouseid][tPointY] = y;
+		THouseInfo[thouseid][tPointZ] = z;
+
+		ReloadTHouse(thouseid);
+
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE traphouse SET thouse_x = '%f', thouse_y = '%f', thouse_z = '%f' WHERE id = %i", THouseInfo[thouseid][tPointX], THouseInfo[thouseid][tPointY], THouseInfo[thouseid][tPointZ], thouseid);
+		mysql_tquery(connectionID, queryBuffer);
+
+		SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has set the position of trap house %i.", GetRPName(playerid), thouseid);
+		SendMessage(playerid, COLOR_WHITE, "You have set the position of trap house %i.", thouseid);
+	}
+	if(!strcmp(option, "int", true))
+    {
+		GetPlayerPos(playerid, x, y, z);
+		THouseInfo[thouseid][tPointX1] = x;
+		THouseInfo[thouseid][tPointY1] = y;
+		THouseInfo[thouseid][tPointZ1] = z;
+
+		ReloadTHouse(thouseid);
+
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE traphouse SET thouse_x1 = '%f', thouse_y1 = '%f', thouse_z1 = '%f' WHERE id = %i", THouseInfo[thouseid][tPointX1], THouseInfo[thouseid][tPointY1], THouseInfo[thouseid][tPointZ1], thouseid);
+		mysql_tquery(connectionID, queryBuffer);
+
+		SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has set the interior of trap house %i.", GetRPName(playerid), thouseid);
+		SendMessage(playerid, COLOR_WHITE, "You have set the interior of trap house %i.", thouseid);
+	}
+	if(!strcmp(option, "safe", true))
+    {
+		GetPlayerPos(playerid, x, y, z);
+		THouseInfo[thouseid][tPointX2] = x;
+		THouseInfo[thouseid][tPointY2] = y;
+		THouseInfo[thouseid][tPointZ2] = z;
+
+		ReloadTHouse(thouseid);
+
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE traphouse SET thouse_x2 = '%f', thouse_y2 = '%f', thouse_z2 = '%f' WHERE id = %i", THouseInfo[thouseid][tPointX2], THouseInfo[thouseid][tPointY2], THouseInfo[thouseid][tPointZ2], thouseid);
+		mysql_tquery(connectionID, queryBuffer);
+
+		SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has set the safety vault of trap house %i.", GetRPName(playerid), thouseid);
+		SendMessage(playerid, COLOR_WHITE, "You have set the safety vault of trap house %i.", thouseid);
+	}
+	if(!strcmp(option, "name", true))
+    {
+        if(isnull(param))
+        {
+            return SendClientMessage(playerid, COLOR_SYNTAX, "Usage: /edittraphouse [thouseid] [name] [text]");
+		}
+
+		strcpy(THouseInfo[thouseid][tName], param, 32);
+		ReloadTHouse(thouseid);
+
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE traphouse SET name = '%e' WHERE id = %i", THouseInfo[thouseid][tName], thouseid);
+		mysql_tquery(connectionID, queryBuffer);
+
+		SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has set the name of trap house %i to %s.", GetRPName(playerid), thouseid, param);
+		SendMessage(playerid, COLOR_WHITE, "You have set the name of trap house %i to {F7A763}%s{FFFFFF}.", thouseid, param);
+	}
+
+	return 1;
+}
+
+CMD:removetraphouse(playerid, params[])
+{
+	new thouseid;
+
+	if(PlayerInfo[[playerid][pAdmin] < 5 && !PlayerInfo[[playerid][pGangMod])
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "You are not authorized to use this command.");
+	}
+	if(sscanf(params, "i", thouseid))
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "Usage: /removetraphouse [thouseid]");
+	}
+	if(!(0 <= thouseid < MAX_THOUSE) || !THouseInfo[thouseid][tExists])
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "Invalid trap house.");
+	}
+
+	DestroyDynamic3DTextLabel(THouseInfo[thouseid][tText]);
+	DestroyDynamicObject(THouseInfo[thouseid][tObject]);
+	DestroyDynamic3DTextLabel(THouseInfo[thouseid][tText1]);
+	DestroyDynamicObject(THouseInfo[thouseid][tObject1]);
+
+	mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "DELETE FROM traphouse WHERE id = %i", thouseid);
+	mysql_tquery(connectionID, queryBuffer);
+
+	SendAdminMessage(COLOR_LIGHTRED, "AdmCmd: %s has deleted trap house %s.", GetRPName(playerid), THouseInfo[thouseid][tName]);
+	SendMessage(playerid, COLOR_WHITE, "You have deleted trap house {F7A763}%s{FFFFFF}.", THouseInfo[thouseid][tName]);
+
+	THouseInfo[thouseid][tExists] = 0;
+	THouseInfo[thouseid][tTime] = 0;
+	return 1;
+}
+
+CMD:traphouses(playerid, params[])
+{
+	new thouseid, timeleft[32], string[2048];
+	tsstring = "";
+	for(thouseid = 0; thouseid < MAX_THOUSE; thouseid++)
+	{
+		if(THouseInfo[thouseid][tExists])
+		{
+			if(THouseInfo[thouseid][tTime] > 0) format(timeleft, sizeof(timeleft), "%d Hours left", THouseInfo[thouseid][tTime]);
+			else format(timeleft, sizeof(timeleft), "Vulnerable");
+			format(string, sizeof(string), "%s%s\t%s\n", string, THouseInfo[thouseid][tName], timeleft);
+		}
+	}
+	format(string, sizeof(string), "Location\tTime\n%s", string);
+	ShowPlayerDialog(playerid, 0, DIALOG_STYLE_TABLIST_HEADERS, ""SVRCLR"Trap House", string, "Next", "Cancel");
+	return 1;
+}
+
+CMD:loottraphouse(playerid, params[])
+{
+	new thouseid = GetPVarInt(playerid, "THOUSEID");
+	if(!IsPlayerInRangeOfPoint(playerid, 3.0, THouseInfo[thouseid][tPointX2], THouseInfo[thouseid][tPointY2], THouseInfo[thouseid][tPointZ2]))
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "You are not any range of trap house safety vault.");
+	}
+	if(PlayerInfo[[playerid][pGang] == -1)
+	{
+		return SendClientMessage(playerid, COLOR_SYNTAX, "You can't use this command as you're not a gang member.");
+	}
+	if(GetPlayerState(playerid) != PLAYER_STATE_ONFOOT)
+	{
+		return SendClientMessage(playerid, COLOR_SYNTAX, "You must be onfoot in order to breach this door.");
+	}
+	if(THouseInfo[thouseid][tInside] != playerid)
+	{
+		return SendClientMessage(playerid, COLOR_SYNTAX, "You can't loot this house as you're not the one who breached.");
+	}
+	SendClientMessage(playerid, COLOR_CYAN, "You start looting this house.");
+	SendClientMessage(playerid, COLOR_WHITE, "[TIPS]: "GREY"Type "WHITE"[/stoploottraphouse] "GREY"to stop looting.");
+	TogglePlayerControllable(playerid, 0);
+	PlayAnimEx(playerid, "BOMBER", "BOM_Plant_Loop", 4.0, 1, 0, 0, 0, 0, 1);
+	THouseInfo[thouseid][tOpenning] += 1;
+	PlayerInfo[[playerid][pLootingHouse] = 300;
+	return 1;
+}
+
+public OnPlayerConnect(playerid)
+{
+    TrapHouse[playerid] = 0;
+    #if defined Thouse_OnPlayerConnect
+		return Thouse_OnPlayerConnect(playerid);
+	#else
+		return 1;
+	#endif
+}
+#if defined _ALS_OnPlayerConnect
+	#undef OnPlayerConnect
+#else
+	#define _ALS_OnPlayerConnect
+#endif
+#define OnPlayerConnect Thouse_OnPlayerConnect
+#if defined Thouse_OnPlayerConnect
+	forward Thouse_OnPlayerConnect(playerid);
+#endif
