@@ -1,0 +1,141 @@
+#define MAX_LOCATION		200
+
+enum E_LOCATION_INFO
+{
+    lcExists,
+	lcID,
+    lcName[128],
+    Float:lcPosX,
+    Float:lcPosY,
+    Float:lcPosZ,
+	Float:lcPosA,
+};
+new LocationInfo[MAX_LOCATION][E_LOCATION_INFO];
+
+forward LoadLocation();
+public LoadLocation()
+{
+	new rows = cache_num_rows();
+	if(rows) 
+	{
+		for(new i; i < rows; i++) 
+		{
+			LocationInfo[i][lcExists] = 1;
+			cache_get_field_content(i, "name", LocationInfo[i][lcName], connectionID, 258);
+			LocationInfo[i][lcID] = cache_get_field_content_int(i, "id");
+			LocationInfo[i][lcPosX] = cache_get_field_content_float(i, "pos_x");
+			LocationInfo[i][lcPosY] = cache_get_field_content_float(i, "pos_y");
+			LocationInfo[i][lcPosZ] = cache_get_field_content_float(i, "pos_z");
+			LocationInfo[i][lcPosA] = cache_get_field_content_float(i, "pos_a");
+		}
+	}
+	printf("[MySQL] %i location loaded.", rows);
+	return 1;
+}
+
+forward CreateLocation(playerid, id, name[], Float:x, Float:y, Float:z, Float:a);
+public CreateLocation(playerid, id, name[], Float:x, Float:y, Float:z, Float:a)
+{
+	strcpy(LocationInfo[id][lcName], name, 258);
+	LocationInfo[id][lcExists] = 1;
+	LocationInfo[id][lcID] = cache_insert_id(connectionID);
+	LocationInfo[id][lcPosX] = x;
+	LocationInfo[id][lcPosY] = y;
+	LocationInfo[id][lcPosZ] = z;
+	LocationInfo[id][lcPosA] = a;
+
+	SendAdminMessage(COLOR_LIGHTRED,"AdmCmd: %s has created new location %d", GetPlayerNameEx(playerid), id);
+}
+
+CMD:createlocation(playerid, params[])
+{
+    new name[258], Float:x, Float:y, Float:z, Float:a;
+    if(PlayerInfo[playerid][pAdmin] < 7) return SendClientMessage(playerid, COLOR_SYNTAX, "Your not autorized to use this command.");
+    if(sscanf(params, "s[258]", name)) return SendClientMessage(playerid, COLOR_SYNTAX, "USAGE: /createlocation [name]");
+    
+    GetPlayerPos(playerid, x, y, z);
+    GetPlayerFacingAngle(playerid, a);
+    for(new i = 0; i < MAX_LOCATION; i ++)
+	{
+	    if(!LocationInfo[i][lcExists])
+	    {
+			mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "INSERT INTO locations (name, pos_x, pos_y, pos_z, pos_a) VALUES('%e', '%f', '%f', '%f', '%f')", name, x, y, z, a);
+			mysql_tquery(connectionID, queryBuffer, "CreateLocation", "iisffff", playerid, i, name, x, y, z, a);
+			return 1;
+		}
+	}
+    return 1;
+}
+
+CMD:removelocation(playerid, params[])
+{
+    new id;
+    if(PlayerInfo[playerid][pAdmin] < 7) return SendClientMessage(playerid, COLOR_SYNTAX, "Your not autorized to use this command.");
+    if(sscanf(params, "i", id)) return SendClientMessage(playerid, COLOR_SYNTAX, "USAGE: /removelocation [id]");
+    if(!(0 <= id < MAX_LOCATION) || !LocationInfo[id][lcExists]) return SendClientMessage(playerid, COLOR_SYNTAX, "Invalid label.");
+
+    mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "DELETE FROM locations WHERE id = %i", LocationInfo[id][lcID]);
+    mysql_tquery(connectionID, queryBuffer);
+
+	LocationInfo[id][lcExists] = 0;
+	LocationInfo[id][lcID] = 0;
+
+    SendMessage(playerid, COLOR_WHITE, "** You have removed label  %i.", id);
+    return 1;
+}
+
+CMD:gotolocation(playerid, params[])
+{
+	new id;
+    if(PlayerInfo[playerid][pAdmin] < 7) return SendClientMessage(playerid, COLOR_SYNTAX, "Your not autorized to use this command.");
+    if(sscanf(params, "i", id)) return SendClientMessage(playerid, COLOR_SYNTAX, "USAGE: /gotolocation [id]");
+	if(!(0 <= id < MAX_LOCATION) || !LocationInfo[id][lcExists]) return SendClientMessage(playerid, COLOR_SYNTAX, "Invalid label.");
+
+	GameTextForPlayer(playerid, "~w~Teleported", 5000, 1);
+	SetPlayerPos(playerid, LocationInfo[id][lcPosX], LocationInfo[id][lcPosY], LocationInfo[id][lcPosZ]);
+	SetPlayerInterior(playerid, 0);
+	SetPlayerVirtualWorld(playerid, 0);
+	SetCameraBehindPlayer(playerid);
+	return 1;
+}
+CMD:editlocation(playerid, params[])
+{
+	new id, option[14], param[64];
+	if(PlayerInfo[playerid][pAdmin] < 7)
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "You are not authorized to use this command.");
+	}
+	if(sscanf(params, "is[14]S()[64]", id, option, param))
+	{
+	    SendClientMessage(playerid, COLOR_SYNTAX, "Usage: /editlocation [id] [option]");
+	    SendClientMessage(playerid, COLOR_WHITE, "Available options: name, position");
+	    return 1;
+	}
+	if(!(0 <= id < MAX_LOCATION) || !LocationInfo[id][lcExists])
+	{
+	    return SendClientMessage(playerid, COLOR_SYNTAX, "Invalid Location.");
+	}
+	if(!strcmp(option, "name", true))
+	{
+	    new name[258];
+	    if(sscanf(param, "s[258]", name))
+	    {
+	        return SendClientMessage(playerid, COLOR_SYNTAX, "Usage: /editlocation [id] [name] [text]");
+		}
+		strcpy(LocationInfo[id][lcName], name, 258);
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE locations SET name = '%e' WHERE id = %i", LocationInfo[id][lcName], LocationInfo[id][lcID]);
+	    mysql_tquery(connectionID, queryBuffer);
+
+	    SendMessage(playerid, COLOR_WHITE, "** You've changed the name of text label %i to '%s'.", id, name);
+	}
+	else if(!strcmp(option, "position", true))
+	{
+	    GetPlayerPos(playerid, LocationInfo[id][lcPosX], LocationInfo[id][lcPosY], LocationInfo[id][lcPosZ]);
+		GetPlayerFacingAngle(playerid, LocationInfo[id][lcPosA]);
+		mysql_format(connectionID, queryBuffer, sizeof(queryBuffer), "UPDATE locations SET pos_x = %f, pos_y = %f, pos_z = %f, pos_a = %f WHERE id = %i", LocationInfo[id][lcPosX], LocationInfo[id][lcPosY], LocationInfo[id][lcPosZ], LocationInfo[id][lcPosA], LocationInfo[id][lcID]);
+	    mysql_tquery(connectionID, queryBuffer);
+
+	    SendMessage(playerid, COLOR_WHITE, "You've changed the position of text label %i.", id);
+	}
+	return 1;
+}
