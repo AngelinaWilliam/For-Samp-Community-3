@@ -1,0 +1,57 @@
+//ANTI BYPASS VERIFICATION DISCORD
+
+#define VERIFY_MAX_VIOLATIONS (3)
+#define VERIFY_MOVE_DISTANCE (1.5)
+
+new Float:VerifyLastPos[MAX_PLAYERS][3];
+new VerifyViolations[MAX_PLAYERS];
+
+stock AntiBypassVerification(playerid)
+{
+    if(User[playerid][pVerified])
+        return 1;
+
+    new Float:x, Float:y, Float:z;
+    GetPlayerPos(playerid, x, y, z);
+
+    new Float:distance = floatsqroot(
+        floatpower(x - VerifyLastPos[playerid][0], 2.0) +
+        floatpower(y - VerifyLastPos[playerid][1], 2.0) +
+        floatpower(z - VerifyLastPos[playerid][2], 2.0)
+    );
+
+    if(distance > VERIFY_MOVE_DISTANCE)
+    {
+        VerifyViolations[playerid]++;
+
+        TogglePlayerControllable(playerid, false);
+
+        SetPlayerPos(
+            playerid,
+            VerifyLastPos[playerid][0],
+            VerifyLastPos[playerid][1],
+            VerifyLastPos[playerid][2]
+        );
+
+        if(VerifyViolations[playerid] >= VERIFY_MAX_VIOLATIONS)
+        {
+            new name[MAX_PLAYER_NAME];
+            GetPlayerName(playerid, name, sizeof(name));
+
+            SendClientMessage(playerid, 0xFF0000FF,
+                "You have been kicked for bypassing Discord verification."
+            );
+
+            printf("[AntiBypassVerification] %s was kicked for bypassing verification.", name);
+
+            Kick(playerid);
+            return 0;
+        }
+    }
+
+    VerifyLastPos[playerid][0] = x;
+    VerifyLastPos[playerid][1] = y;
+    VerifyLastPos[playerid][2] = z;
+
+    return 1;
+}
